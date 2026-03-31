@@ -4,7 +4,7 @@ use anyhow::Context;
 use async_stream::stream;
 use axum::{
     Json, Router,
-    body::Body,
+    body::{Body, Bytes},
     extract::{DefaultBodyLimit, Multipart, Path, Query, State},
     http::{
         HeaderValue, StatusCode,
@@ -116,6 +116,8 @@ pub fn router(resources: SharedState, events: EventHub) -> Router {
         .route("/jobs/pipeline", post(start_pipeline_job))
         .route("/jobs/{job_id}", delete(cancel_pipeline_job))
         .route("/exports", post(export_all))
+        .route("/project/save", post(save_project))
+        .route("/project/open", post(open_project))
         .route("/events", get(events_stream))
         .layer(DefaultBodyLimit::max(MAX_BODY_SIZE))
         .with_state(state)
@@ -810,6 +812,21 @@ async fn export_all(
         ExportLayer::Inpainted => operations::export_all_inpainted(resources).await?,
     };
     Ok(Json(ExportResult { count }))
+}
+
+async fn save_project(State(state): State<ApiState>) -> ApiResult<Vec<u8>> {
+    let resources = get_resources(&state.resources)?;
+    operations::project::save_project(resources)
+        .await
+        .map_err(ApiError::internal)
+}
+
+async fn open_project(State(state): State<ApiState>, body: Bytes) -> ApiResult<Json<()>> {
+    let resources = get_resources(&state.resources)?;
+    operations::project::open_project(resources, body.to_vec())
+        .await
+        .map_err(ApiError::internal)?;
+    Ok(Json(()))
 }
 
 async fn events_stream(

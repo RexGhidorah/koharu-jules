@@ -1,3 +1,4 @@
+pub mod project;
 mod core;
 mod edit;
 mod llm;

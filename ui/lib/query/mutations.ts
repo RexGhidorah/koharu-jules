@@ -316,6 +316,47 @@ export const useDocumentMutations = () => {
     await invalidateCurrentDocument(queryClient, currentDocumentIndex)
   }, [queryClient])
 
+  const saveProject = useCallback(async () => {
+    const { startOperation, finishOperation } = useOperationStore.getState()
+    startOperation({
+      type: 'load-khr',
+      cancellable: false,
+    })
+    try {
+      await api.saveProject()
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') throw e
+    } finally {
+      finishOperation()
+    }
+  }, [])
+
+  const openProject = useCallback(async () => {
+    const { startOperation, finishOperation } = useOperationStore.getState()
+    startOperation({
+      type: 'load-khr',
+      cancellable: false,
+    })
+    try {
+      await api.openProject()
+      const count = await api.getDocumentsCount()
+      useEditorUiStore.getState().setTotalPages(count)
+      clearMaskSync()
+      queryClient.setQueryData(queryKeys.documents.count, count)
+      await refreshDocuments()
+      if (count > 0) {
+        await queryClient.prefetchQuery({
+          queryKey: queryKeys.documents.current(0),
+          queryFn: () => api.getDocument(0),
+        })
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') throw e
+    } finally {
+      finishOperation()
+    }
+  }, [clearMaskSync, queryClient, refreshDocuments])
+
   const openDocuments = useCallback(async () => {
     const { startOperation, finishOperation } = useOperationStore.getState()
     startOperation({
@@ -695,6 +736,8 @@ export const useDocumentMutations = () => {
     refreshCurrentDocument,
     addDocuments,
     openDocuments,
+    openProject,
+    saveProject,
     openFolder,
     addFolder,
     deleteDocument,
