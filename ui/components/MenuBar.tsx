@@ -35,6 +35,8 @@ export function MenuBar() {
   const {
     addDocuments,
     openDocuments,
+    openProject,
+    saveProject,
     openFolder,
     addFolder,
     openExternal,
@@ -48,6 +50,16 @@ export function MenuBar() {
   } = useDocumentMutations()
 
   const fileMenuItems: MenuItem[] = [
+    {
+      label: t('menu.openProject'),
+      onSelect: openProject,
+      testId: 'menu-project-open',
+    },
+    {
+      label: t('menu.saveProject'),
+      onSelect: saveProject,
+      testId: 'menu-project-save',
+    },
     {
       label: t('menu.openFile'),
       onSelect: openDocuments,

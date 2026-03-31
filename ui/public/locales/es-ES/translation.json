@@ -4,6 +4,8 @@
   },
   "menu": {
     "file": "Archivo",
+    "openProject": "Abrir proyecto...",
+    "saveProject": "Guardar proyecto...",
     "openFile": "Abrir archivo...",
     "addFile": "Agregar archivo...",
     "openFolder": "Abrir carpeta...",

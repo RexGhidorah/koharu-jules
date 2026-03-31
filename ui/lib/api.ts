@@ -361,6 +361,37 @@ export const api = {
     })
   },
 
+  async saveProject(): Promise<void> {
+    return withRpcError('save_project', async () => {
+      const res = await fetchBinary('/project/save', {
+        method: 'POST',
+      })
+      const blob = new Blob([res.data.buffer as ArrayBuffer], { type: res.contentType })
+      await fileSave(blob, {
+        fileName: res.filename ?? 'project.khr',
+        extensions: ['.khr'],
+        description: 'Koharu Project File',
+      })
+    })
+  },
+
+  async openProject(): Promise<void> {
+    return withRpcError('open_project', async () => {
+      const file = await fileOpen({
+        extensions: ['.khr'],
+        description: 'Koharu Project File',
+      })
+      const arrayBuffer = await file.arrayBuffer()
+      await fetchJson('/project/open', {
+        method: 'POST',
+        body: arrayBuffer,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      })
+    })
+  },
+
   async openDocuments(): Promise<number> {
     return withRpcError('open_documents', async () => {
       const files = await pickDocuments()
