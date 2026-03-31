@@ -3,9 +3,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
+import { Trash2Icon } from 'lucide-react'
 import { useDocumentsCountQuery, useThumbnailQuery } from '@/lib/query/hooks'
+import { useDocumentMutations } from '@/lib/query/mutations'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { flushTextBlockSync } from '@/lib/services/syncQueues'
 import { cancelObjectUrlRevoke, revokeObjectUrlLater } from '@/lib/util'
@@ -38,6 +45,8 @@ export function Navigator() {
   useEffect(() => {
     rowVirtualizer.measure()
   }, [rowVirtualizer, totalPages, documentsVersion])
+
+  const { deleteDocument } = useDocumentMutations()
 
   return (
     <div
@@ -102,6 +111,10 @@ export function Navigator() {
                           setCurrentDocumentIndex(idx)
                         })
                     }}
+                    onDelete={(e) => {
+                      e.stopPropagation()
+                      void deleteDocument(idx)
+                    }}
                   />
                 </div>
               )
@@ -118,6 +131,7 @@ type PagePreviewProps = {
   documentsVersion: number
   selected: boolean
   onSelect: () => void
+  onDelete: (e: React.MouseEvent) => void
 }
 
 function PagePreview({
@@ -125,6 +139,7 @@ function PagePreview({
   documentsVersion,
   selected,
   onSelect,
+  onDelete,
 }: PagePreviewProps) {
   const [preview, setPreview] = useState<string>()
   const {
@@ -147,35 +162,53 @@ function PagePreview({
   }, [thumbnailBlob])
 
   return (
-    <Button
-      variant='ghost'
-      onClick={onSelect}
-      data-testid={`navigator-page-${index}`}
-      data-page-index={index}
-      data-selected={selected}
-      className='bg-card data-[selected=true]:border-primary flex h-auto flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm'
-    >
-      {loading ? (
-        <div className='bg-muted aspect-3/4 w-full animate-pulse rounded' />
-      ) : error ? (
-        <div className='bg-muted flex aspect-3/4 w-full items-center justify-center rounded'>
-          <span className='text-muted-foreground text-[10px]'>?</span>
+    <div className='group relative'>
+      <Button
+        variant='ghost'
+        onClick={onSelect}
+        data-testid={`navigator-page-${index}`}
+        data-page-index={index}
+        data-selected={selected}
+        className='bg-card data-[selected=true]:border-primary flex h-auto w-full flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm'
+      >
+        {loading ? (
+          <div className='bg-muted aspect-3/4 w-full animate-pulse rounded' />
+        ) : error ? (
+          <div className='bg-muted flex aspect-3/4 w-full items-center justify-center rounded'>
+            <span className='text-muted-foreground text-[10px]'>?</span>
+          </div>
+        ) : preview ? (
+          <img
+            src={preview}
+            alt={`Page ${index + 1}`}
+            style={{ objectFit: 'contain' }}
+            className='aspect-3/4 w-full rounded object-cover'
+          />
+        ) : (
+          <div className='bg-muted aspect-3/4 w-full rounded' />
+        )}
+        <div className='text-muted-foreground flex flex-1 items-center text-xs'>
+          <div className='text-foreground mx-auto flex text-center font-semibold'>
+            {index + 1}
+          </div>
         </div>
-      ) : preview ? (
-        <img
-          src={preview}
-          alt={`Page ${index + 1}`}
-          style={{ objectFit: 'contain' }}
-          className='aspect-3/4 w-full rounded object-cover'
-        />
-      ) : (
-        <div className='bg-muted aspect-3/4 w-full rounded' />
-      )}
-      <div className='text-muted-foreground flex flex-1 items-center text-xs'>
-        <div className='text-foreground mx-auto flex text-center font-semibold'>
-          {index + 1}
-        </div>
-      </div>
-    </Button>
+      </Button>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant='destructive'
+            size='icon-xs'
+            onClick={onDelete}
+            className='absolute -top-1 -right-1 hidden size-5 rounded-full shadow-md group-hover:flex'
+          >
+            <Trash2Icon className='size-3' />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side='left' sideOffset={4}>
+          Delete
+        </TooltipContent>
+      </Tooltip>
+    </div>
   )
 }

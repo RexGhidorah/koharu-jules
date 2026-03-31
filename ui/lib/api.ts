@@ -415,6 +415,16 @@ export const api = {
     })
   },
 
+  async deleteDocument(index: number): Promise<void> {
+    return withRpcError('delete_document', async () => {
+      const summary = await getDocumentSummaryAtIndex(index)
+      await fetchJson<void>(`/documents/${summary.id}`, {
+        method: 'DELETE',
+      })
+      documentDetailCache.delete(summary.id)
+    })
+  },
+
   async exportDocument(index: number): Promise<void> {
     return withRpcError('export_document', async () => {
       const summary = await getDocumentSummaryAtIndex(index)

@@ -22,6 +22,7 @@ import {
 } from '@/types'
 import type { FontFaceInfo } from '@/lib/protocol'
 import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 import { ColorPicker } from '@/components/ui/color-picker'
 import { Input } from '@/components/ui/input'
 import {
@@ -30,12 +31,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
 import { usePreferencesStore } from '@/lib/stores/preferencesStore'
 import { useFontsQuery } from '@/lib/query/hooks'
@@ -241,6 +249,7 @@ export function RenderControlsPanel() {
   const currentTextAlign = resolveEffectiveTextAlign(
     selectedBlock ?? firstBlock,
   )
+  const [fontSearchOpen, setFontSearchOpen] = useState(false)
   const scopeLabel =
     selectedBlockIndex !== undefined
       ? t('render.fontScopeBlockIndex', {
@@ -365,54 +374,87 @@ export function RenderControlsPanel() {
 
         <div className='flex min-w-0 items-center gap-1.5'>
           <div className='min-w-0 flex-1'>
-            <Select
-              value={currentFont}
-              onValueChange={(value) => {
-                const nextFamilies = mergeFontFamilies(
-                  value,
-                  selectedBlock?.style?.fontFamilies,
-                )
-                if (applyStyleToSelected({ fontFamilies: nextFamilies })) return
-                setFontFamily(value)
-                if (!hasBlocks) return
-                const nextBlocks = textBlocks.map((block) => ({
-                  ...block,
-                  style: buildStyle(block, block.style, {
-                    fontFamilies: mergeFontFamilies(
-                      value,
-                      block.style?.fontFamilies,
-                    ),
-                  }),
-                }))
-                void updateTextBlocks(nextBlocks)
-              }}
-              disabled={fontOptions.length === 0}
-            >
-              <SelectTrigger
-                data-testid='render-font-select'
-                size='sm'
-                className='h-7 w-full min-w-0 text-xs'
-                style={
-                  currentFontFamilyName
-                    ? { fontFamily: currentFontFamilyName }
-                    : undefined
-                }
+            <Popover open={fontSearchOpen} onOpenChange={setFontSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  role='combobox'
+                  aria-expanded={fontSearchOpen}
+                  disabled={fontOptions.length === 0}
+                  className='border-input hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 flex h-7 w-full min-w-0 items-center justify-between gap-1.5 rounded-md border bg-transparent px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50'
+                  style={
+                    currentFontFamilyName
+                      ? { fontFamily: currentFontFamilyName }
+                      : undefined
+                  }
+                  data-testid='render-font-select'
+                >
+                  <span className='line-clamp-1 flex-1 text-left'>
+                    {currentFontFamilyName || t('render.fontPlaceholder')}
+                  </span>
+                  <ChevronDownIcon className='text-muted-foreground size-3.5 shrink-0 opacity-50' />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className='w-[var(--radix-popover-trigger-width)] p-0'
+                align='start'
               >
-                <SelectValue placeholder={t('render.fontPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent position='popper'>
-                {fontOptions.map((font, index) => (
-                  <SelectItem
-                    key={font.postScriptName}
-                    value={font.postScriptName}
-                    style={{ fontFamily: font.familyName }}
-                    data-testid={`render-font-option-${index}`}
-                  >
-                    {font.familyName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Command>
+                  <CommandInput placeholder={t('render.fontPlaceholder')} />
+                  <CommandList>
+                    <CommandEmpty>No fonts found.</CommandEmpty>
+                    <CommandGroup>
+                      {fontOptions.map((font, index) => (
+                        <CommandItem
+                          key={font.postScriptName}
+                          value={font.postScriptName}
+                          keywords={[font.familyName]}
+                          onSelect={(value) => {
+                            const nextFamilies = mergeFontFamilies(
+                              value,
+                              selectedBlock?.style?.fontFamilies,
+                            )
+                            setFontSearchOpen(false)
+                            if (
+                              applyStyleToSelected({
+                                fontFamilies: nextFamilies,
+                              })
+                            )
+                              return
+                            setFontFamily(value)
+                            if (!hasBlocks) return
+                            const nextBlocks = textBlocks.map((block) => ({
+                              ...block,
+                              style: buildStyle(block, block.style, {
+                                fontFamilies: mergeFontFamilies(
+                                  value,
+                                  block.style?.fontFamilies,
+                                ),
+                              }),
+                            }))
+                            void updateTextBlocks(nextBlocks)
+                          }}
+                          style={{ fontFamily: font.familyName }}
+                          data-testid={`render-font-option-${index}`}
+                          className='cursor-pointer text-xs'
+                        >
+                          {font.familyName}
+                          <CheckIcon
+                            className={cn(
+                              'ml-auto size-3',
+                              currentFont === font.postScriptName
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <Tooltip>

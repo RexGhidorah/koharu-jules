@@ -1,0 +1,44 @@
+<<<<<<< SEARCH
+        .route("/documents/{document_id}", get(get_document))
+=======
+        .route("/documents/{document_id}", get(get_document).delete(delete_document))
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+async fn get_document(
+    State(state): State<ApiState>,
+    Path(document_id): Path<String>,
+) -> ApiResult<Json<DocumentDetail>> {
+    let resources = state.resources()?;
+    let guard = resources.state.read().await;
+    let doc = guard
+        .documents
+        .iter()
+        .find(|d| d.id == document_id)
+        .ok_or_else(|| ApiError::not_found("Document not found"))?;
+    Ok(Json(DocumentDetail::from(doc)))
+}
+=======
+async fn get_document(
+    State(state): State<ApiState>,
+    Path(document_id): Path<String>,
+) -> ApiResult<Json<DocumentDetail>> {
+    let resources = state.resources()?;
+    let guard = resources.state.read().await;
+    let doc = guard
+        .documents
+        .iter()
+        .find(|d| d.id == document_id)
+        .ok_or_else(|| ApiError::not_found("Document not found"))?;
+    Ok(Json(DocumentDetail::from(doc)))
+}
+
+async fn delete_document(
+    State(state): State<ApiState>,
+    Path(document_id): Path<String>,
+) -> ApiResult<StatusCode> {
+    let resources = state.resources()?;
+    let (index, _) = find_document(&resources, &document_id).await?;
+    state_tx::remove_doc(&resources.state, index).await.map_err(ApiError::from)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+>>>>>>> REPLACE
