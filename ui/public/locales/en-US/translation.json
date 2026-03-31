@@ -221,6 +221,7 @@
     "gemini": "Gemini",
     "claude": "Claude",
     "deepseek": "DeepSeek",
+    "openrouter": "OpenRouter",
     "unknown": "Provider"
   },
   "bootstrap": {

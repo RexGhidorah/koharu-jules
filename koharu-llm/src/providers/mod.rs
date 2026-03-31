@@ -118,6 +118,14 @@ pub fn build_provider(
             http_client: Arc::clone(&config.http_client),
             api_key: required_api_key("deepseek")?,
         }),
+        "openrouter" => Box::new(openai_compatible::OpenAiCompatibleProvider {
+            http_client: Arc::clone(&config.http_client),
+            base_url: "https://openrouter.ai/api/v1".to_string(),
+            api_key: Some(required_api_key("openrouter")?),
+            temperature: config.temperature,
+            max_tokens: config.max_tokens,
+            custom_system_prompt: config.custom_system_prompt,
+        }),
         "openai-compatible" => Box::new(openai_compatible::OpenAiCompatibleProvider {
             http_client: Arc::clone(&config.http_client),
             base_url: config
