@@ -106,6 +106,27 @@ pub async fn llm_list(
         }
     }
 
+    if let Ok(Some(openrouter_key)) = get_saved_api_key("openrouter") {
+        if !openrouter_key.trim().is_empty() {
+            match openai_compatible::list_models(
+                state.runtime.http_client(),
+                "https://openrouter.ai/api/v1",
+                Some(&openrouter_key),
+            )
+            .await
+            {
+                Ok(models) => {
+                    for model in models {
+                        result.push(llm::ModelInfo::api("openrouter", &model));
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(%err, "failed to list openrouter models");
+                }
+            }
+        }
+    }
+
     Ok(result)
 }
 

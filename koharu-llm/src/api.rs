@@ -47,7 +47,14 @@ pub const DEEPSEEK: ApiProviderInfo = ApiProviderInfo {
     }],
 };
 
-pub const ALL_API_PROVIDERS: &[&ApiProviderInfo] = &[&OPENAI, &GEMINI, &CLAUDE, &DEEPSEEK];
+pub const OPENROUTER: ApiProviderInfo = ApiProviderInfo {
+    id: "openrouter",
+    name: "OpenRouter",
+    // OpenRouter models are fetched dynamically.
+    models: &[],
+};
+
+pub const ALL_API_PROVIDERS: &[&ApiProviderInfo] = &[&OPENAI, &GEMINI, &CLAUDE, &DEEPSEEK, &OPENROUTER];
 
 pub fn find_api_model(id: &str) -> Option<(&'static ApiProviderInfo, &'static str)> {
     let (provider_id, model_id) = id.split_once(':')?;
