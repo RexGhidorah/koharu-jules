@@ -15,5 +15,8 @@
   },
   "workspaces": [
     "ui/"
-  ]
+  ],
+  "dependencies": {
+    "cmdk": "^1.1.1"
+  }
 }

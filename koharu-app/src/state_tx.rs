@@ -82,6 +82,17 @@ pub async fn replace_docs(state: &AppState, mut documents: Vec<Document>) -> Res
     Ok(count)
 }
 
+pub async fn remove_doc(state: &AppState, index: usize) -> Result<()> {
+    let mut guard = state.write().await;
+    if index >= guard.documents.len() {
+        anyhow::bail!("Document not found at index {index}");
+    }
+    guard.documents.remove(index);
+    drop(guard);
+    emit(StateEvent::DocumentsChanged);
+    Ok(())
+}
+
 pub async fn append_docs(state: &AppState, mut documents: Vec<Document>) -> Result<usize> {
     for document in &mut documents {
         document.prepare_for_store();

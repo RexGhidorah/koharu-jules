@@ -62,7 +62,10 @@ pub fn router(resources: SharedState, events: EventHub) -> Router {
         .route("/fonts", get(get_fonts))
         .route("/documents", get(list_documents))
         .route("/documents/import", post(import_documents))
-        .route("/documents/{document_id}", get(get_document))
+        .route(
+            "/documents/{document_id}",
+            get(get_document).delete(delete_document),
+        )
         .route("/documents/{document_id}/thumbnail", get(get_thumbnail))
         .route(
             "/documents/{document_id}/layers/{layer}",
@@ -254,6 +257,18 @@ async fn get_document(
         .find(|d| d.id == document_id)
         .ok_or_else(|| ApiError::not_found("Document not found"))?;
     Ok(Json(DocumentDetail::from(doc)))
+}
+
+async fn delete_document(
+    State(state): State<ApiState>,
+    Path(document_id): Path<String>,
+) -> ApiResult<StatusCode> {
+    let resources = state.resources()?;
+    let (index, _) = find_document(&resources, &document_id).await?;
+    state_tx::remove_doc(&resources.state, index)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn get_thumbnail(

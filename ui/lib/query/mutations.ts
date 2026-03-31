@@ -432,6 +432,32 @@ export const useDocumentMutations = () => {
     }
   }, [queryClient, refreshDocuments])
 
+  const deleteDocument = useCallback(
+    async (index: number) => {
+      await api.deleteDocument(index)
+
+      const { totalPages, currentDocumentIndex } = useEditorUiStore.getState()
+      const newTotalPages = Math.max(0, totalPages - 1)
+
+      let nextIndex = currentDocumentIndex
+      if (currentDocumentIndex >= newTotalPages) {
+        nextIndex = Math.max(0, newTotalPages - 1)
+      }
+
+      useEditorUiStore.setState((state) => ({
+        totalPages: newTotalPages,
+        documentsVersion: state.documentsVersion + 1,
+        currentDocumentIndex: nextIndex,
+        selectedBlockIndex: undefined,
+      }))
+
+      clearMaskSync()
+      queryClient.setQueryData(queryKeys.documents.count, newTotalPages)
+      await refreshDocuments()
+    },
+    [queryClient, refreshDocuments],
+  )
+
   const openExternal = useCallback(async (url: string) => {
     await api.openExternal(url)
   }, [])
@@ -671,6 +697,7 @@ export const useDocumentMutations = () => {
     openDocuments,
     openFolder,
     addFolder,
+    deleteDocument,
     openExternal,
     detect,
     ocr,
