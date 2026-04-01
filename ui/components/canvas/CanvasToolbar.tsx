@@ -36,6 +36,7 @@ import { useDocumentMutations, useLlmMutations } from '@/lib/query/mutations'
 import { useOperationStore } from '@/lib/stores/operationStore'
 import { usePreferencesStore } from '@/lib/stores/preferencesStore'
 import { getProviderDisplayName } from '@/lib/providers'
+import i18n from '@/lib/i18n'
 
 export function CanvasToolbar() {
   return (
@@ -174,6 +175,8 @@ function LlmStatusPopover() {
   const { t } = useTranslation()
   const apiKeys = usePreferencesStore((state) => state.apiKeys)
   const localLlm = usePreferencesStore((state) => state.localLlm)
+  const persistedSelectedModel = usePreferencesStore((state) => state.llmSelectedModel)
+  const persistedSelectedLanguage = usePreferencesStore((state) => state.llmSelectedLanguage)
 
   const selectedModelInfo = useMemo(
     () => llmModels.find((m) => m.id === llmSelectedModel),
@@ -194,15 +197,27 @@ function LlmStatusPopover() {
 
   useEffect(() => {
     if (llmModels.length === 0) return
-    const hasCurrent = llmModels.some((model) => model.id === llmSelectedModel)
-    const nextModel = hasCurrent ? llmSelectedModel : llmModels[0]?.id
+
+    // First try the transient state, then the persisted state, then fallback to first model
+    const candidateModel = llmSelectedModel ?? persistedSelectedModel
+    const hasCurrent = candidateModel && llmModels.some((model) => model.id === candidateModel)
+    const nextModel = hasCurrent ? candidateModel : llmModels[0]?.id
+
     if (!nextModel) return
     const languages =
       llmModels.find((model) => model.id === nextModel)?.languages ?? []
+    const uiLang = i18n.language || 'en-US'
+    const fallbackLang = 'en-US'
+
+    const candidateLanguage = llmSelectedLanguage ?? persistedSelectedLanguage
     const nextLanguage =
-      llmSelectedLanguage && languages.includes(llmSelectedLanguage)
-        ? llmSelectedLanguage
-        : languages[0]
+      candidateLanguage && languages.includes(candidateLanguage)
+        ? candidateLanguage
+        : languages.includes(uiLang)
+          ? uiLang
+          : languages.includes(fallbackLang)
+            ? fallbackLang
+            : languages[0]
     const currentState = useLlmUiStore.getState()
     if (
       currentState.selectedModel === nextModel &&

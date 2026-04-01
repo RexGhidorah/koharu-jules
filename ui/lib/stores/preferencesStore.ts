@@ -53,6 +53,10 @@ type PreferencesState = {
   localLlm: LocalLlmConfig
   setLocalLlm: (config: Partial<LocalLlmPresetConfig>) => void
   setActivePreset: (preset: LocalLlmPreset) => void
+  llmSelectedModel?: string
+  setLlmSelectedModel: (model?: string) => void
+  llmSelectedLanguage?: string
+  setLlmSelectedLanguage: (language?: string) => void
   resetPreferences: () => void
 }
 
@@ -87,6 +91,8 @@ const initialPreferences = {
   providerModelNames: {} as Record<string, string>,
   openAiCompatibleConfigVersion: 0,
   localLlm: initialLocalLlm,
+  llmSelectedModel: undefined as string | undefined,
+  llmSelectedLanguage: undefined as string | undefined,
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -152,6 +158,8 @@ export const usePreferencesStore = create<PreferencesState>()(
           openAiCompatibleConfigVersion:
             state.openAiCompatibleConfigVersion + 1,
         })),
+      setLlmSelectedModel: (model) => set({ llmSelectedModel: model }),
+      setLlmSelectedLanguage: (language) => set({ llmSelectedLanguage: language }),
       resetPreferences: () => set({ ...initialPreferences }),
     }),
     {
@@ -216,6 +224,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         providerBaseUrls: state.providerBaseUrls,
         providerModelNames: state.providerModelNames,
         localLlm: state.localLlm,
+        llmSelectedModel: state.llmSelectedModel,
+        llmSelectedLanguage: state.llmSelectedLanguage,
       }),
     },
   ),
