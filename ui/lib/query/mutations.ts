@@ -76,6 +76,10 @@ const pickLanguage = (
   const languages = findModelLanguages(models, modelId)
   if (!languages.length) return undefined
   if (preferred && languages.includes(preferred)) return preferred
+  const uiLang = i18n.language || 'en-US'
+  const fallbackLang = 'en-US'
+  if (languages.includes(uiLang)) return uiLang
+  if (languages.includes(fallbackLang)) return fallbackLang
   return languages[0]
 }
 
@@ -778,6 +782,8 @@ export const useLlmMutations = () => {
         selectedLanguage: nextLanguage,
         loading: false,
       })
+      usePreferencesStore.getState().setLlmSelectedModel(id)
+      usePreferencesStore.getState().setLlmSelectedLanguage(nextLanguage)
       queryClient.setQueryData(queryKeys.llm.ready(id), false)
     },
     [queryClient],
@@ -790,6 +796,7 @@ export const useLlmMutations = () => {
       const languages = findModelLanguages(models, selectedModel)
       if (!languages.includes(language)) return
       useLlmUiStore.setState({ selectedLanguage: language })
+      usePreferencesStore.getState().setLlmSelectedLanguage(language)
     },
     [queryClient],
   )
@@ -855,11 +862,17 @@ export const useLlmMutations = () => {
       const models = getCachedLlmModels(queryClient)
 
       const languages = findModelLanguages(models, selectedModel)
+      const uiLang = i18n.language || 'en-US'
+      const fallbackLang = 'en-US'
       const language =
         languages.length > 0
           ? selectedLanguage && languages.includes(selectedLanguage)
             ? selectedLanguage
-            : languages[0]
+            : languages.includes(uiLang)
+              ? uiLang
+              : languages.includes(fallbackLang)
+                ? fallbackLang
+                : languages[0]
           : undefined
 
       await api.llmGenerate(resolvedIndex, textBlockIndex, language)
@@ -906,14 +919,20 @@ export const useLlmMutations = () => {
     )
     const currentModel = useLlmUiStore.getState().selectedModel
     const currentLanguage = useLlmUiStore.getState().selectedLanguage
-    const hasCurrent = models.some((model) => model.id === currentModel)
+    const persistedModel = usePreferencesStore.getState().llmSelectedModel
+    const persistedLanguage = usePreferencesStore.getState().llmSelectedLanguage
+
+    const candidateModel = currentModel ?? persistedModel
+    const hasCurrent = candidateModel && models.some((model) => model.id === candidateModel)
     const nextModel = hasCurrent
-      ? (currentModel ?? models[0]?.id)
+      ? (candidateModel ?? models[0]?.id)
       : models[0]?.id
+
+    const candidateLanguage = currentLanguage ?? persistedLanguage
     const nextLanguage = pickLanguage(
       models,
       nextModel,
-      hasCurrent ? currentLanguage : undefined,
+      hasCurrent ? candidateLanguage : undefined,
     )
     useLlmUiStore.setState({
       selectedModel: nextModel,
