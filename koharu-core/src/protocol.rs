@@ -377,7 +377,7 @@ pub struct TranslateRequest {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct PipelineJobRequest {
-    pub document_id: Option<String>,
+    pub document_ids: Option<Vec<String>>,
     pub llm_model_id: Option<String>,
     pub llm_api_key: Option<String>,
     pub llm_base_url: Option<String>,

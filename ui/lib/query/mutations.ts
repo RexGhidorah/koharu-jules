@@ -611,8 +611,10 @@ export const useDocumentMutations = () => {
 
   const processImage = useCallback(
     async (_?: any, index?: number) => {
-      const resolvedIndex =
-        index ?? useEditorUiStore.getState().currentDocumentIndex
+      const state = useEditorUiStore.getState()
+      const indices = index !== undefined
+        ? [index]
+        : (state.selectedDocumentIndices.size > 0 ? Array.from(state.selectedDocumentIndices) : [state.currentDocumentIndex])
       const { selectedModel, selectedLanguage } = useLlmUiStore.getState()
       const { renderEffect, renderStroke } = useEditorUiStore.getState()
       const { fontFamily } = usePreferencesStore.getState()
@@ -621,7 +623,7 @@ export const useDocumentMutations = () => {
         type: 'process-current',
         cancellable: true,
         current: 0,
-        total: 5,
+        total: indices.length * 5,
       })
       try {
         const models = getCachedLlmModels(queryClient)
@@ -640,7 +642,7 @@ export const useDocumentMutations = () => {
             ? getBaseUrlForModel(selectedModel!)
             : undefined
         await api.process({
-          index: resolvedIndex,
+          indices,
           llmModelId: selectedModel
             ? toBackendModelId(selectedModel)
             : selectedModel,
@@ -713,14 +715,14 @@ export const useDocumentMutations = () => {
     }
   }, [clearProgress])
 
-  const exportDocument = useCallback(async () => {
-    const { currentDocumentIndex } = useEditorUiStore.getState()
-    await api.exportDocument(currentDocumentIndex)
+  const exportDocument = useCallback(async (index?: number) => {
+    const resolvedIndex = index ?? useEditorUiStore.getState().currentDocumentIndex
+    await api.exportDocument(resolvedIndex)
   }, [])
 
-  const exportPsdDocument = useCallback(async () => {
-    const { currentDocumentIndex } = useEditorUiStore.getState()
-    await api.exportPsdDocument(currentDocumentIndex)
+  const exportPsdDocument = useCallback(async (index?: number) => {
+    const resolvedIndex = index ?? useEditorUiStore.getState().currentDocumentIndex
+    await api.exportPsdDocument(resolvedIndex)
   }, [])
 
   const exportAllInpainted = useCallback(async () => {

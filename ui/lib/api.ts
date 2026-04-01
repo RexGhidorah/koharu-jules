@@ -792,7 +792,7 @@ export const api = {
   },
 
   async process(options: {
-    index?: number
+    indices?: number[]
     llmModelId?: string
     llmApiKey?: string
     llmBaseUrl?: string
@@ -805,16 +805,20 @@ export const api = {
     fontFamily?: string
   }): Promise<void> {
     return withRpcError('process', async () => {
-      const documentId =
-        typeof options.index === 'number'
-          ? (await getDocumentSummaryAtIndex(options.index)).id
-          : undefined
+      let documentIds: string[] | undefined = undefined
+      if (options.indices && options.indices.length > 0) {
+        documentIds = []
+        for (const index of options.indices) {
+          const summary = await getDocumentSummaryAtIndex(index)
+          documentIds.push(summary.id)
+        }
+      }
 
       const job = await fetchJson<JobState>('/jobs/pipeline', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          documentId,
+          documentIds,
           llmModelId: options.llmModelId,
           llmApiKey: options.llmApiKey,
           llmBaseUrl: options.llmBaseUrl,

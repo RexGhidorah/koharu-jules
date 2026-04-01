@@ -116,7 +116,7 @@ export function MenuBar() {
       items: [
         {
           label: t('menu.processCurrent'),
-          onSelect: processImage,
+          onSelect: () => processImage(),
           testId: 'menu-process-current',
         },
         {

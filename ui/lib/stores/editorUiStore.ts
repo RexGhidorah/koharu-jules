@@ -15,11 +15,17 @@ type EditorUiState = {
   showTextBlocksOverlay: boolean
   mode: ToolMode
   selectedBlockIndex?: number
+  selectedDocumentIndices: Set<number>
   autoFitEnabled: boolean
   renderEffect: RenderEffect
   renderStroke: RenderStroke
   setTotalPages: (count: number) => void
   setCurrentDocumentIndex: (index: number) => void
+  toggleDocumentSelection: (index: number) => void
+  addDocumentSelection: (index: number) => void
+  removeDocumentSelection: (index: number) => void
+  clearDocumentSelection: () => void
+  setSelectedDocumentIndices: (indices: Set<number>) => void
   setScale: (scale: number) => void
   setShowSegmentationMask: (show: boolean) => void
   setShowInpaintedImage: (show: boolean) => void
@@ -46,6 +52,7 @@ const initialState = {
   showTextBlocksOverlay: false,
   mode: 'select' as ToolMode,
   selectedBlockIndex: undefined,
+  selectedDocumentIndices: new Set<number>(),
   autoFitEnabled: true,
   renderEffect: {
     italic: false,
@@ -68,6 +75,7 @@ export const useEditorUiStore = create<EditorUiState>((set, get) => ({
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: 0,
         selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
       }
     })
   },
@@ -76,6 +84,31 @@ export const useEditorUiStore = create<EditorUiState>((set, get) => ({
       currentDocumentIndex: index,
       selectedBlockIndex: undefined,
     })),
+  toggleDocumentSelection: (index) =>
+    set((state) => {
+      const next = new Set(state.selectedDocumentIndices)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return { selectedDocumentIndices: next }
+    }),
+  addDocumentSelection: (index) =>
+    set((state) => {
+      const next = new Set(state.selectedDocumentIndices)
+      next.add(index)
+      return { selectedDocumentIndices: next }
+    }),
+  removeDocumentSelection: (index) =>
+    set((state) => {
+      const next = new Set(state.selectedDocumentIndices)
+      next.delete(index)
+      return { selectedDocumentIndices: next }
+    }),
+  clearDocumentSelection: () => set({ selectedDocumentIndices: new Set() }),
+  setSelectedDocumentIndices: (indices) =>
+    set({ selectedDocumentIndices: indices }),
   setScale: (scale) => {
     const clamped = Math.max(10, Math.min(100, Math.round(scale)))
     set({ scale: clamped })
