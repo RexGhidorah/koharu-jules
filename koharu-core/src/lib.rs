@@ -234,7 +234,7 @@ impl Document {
     fn image(path: PathBuf, bytes: Vec<u8>) -> anyhow::Result<Self> {
         let img = ::image::load_from_memory(&bytes)?;
         let (width, height) = img.dimensions();
-        let id = blake3::hash(&bytes).to_hex().to_string();
+        let id = Uuid::new_v4().to_string();
         let name = path
             .file_stem()
             .unwrap_or_default()
