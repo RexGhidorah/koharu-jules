@@ -100,10 +100,10 @@ export function Navigator() {
     return [idx]
   }
 
-  const handleDelete = (idx: number) => {
+  const handleDelete = async (idx: number) => {
     const targets = getTargetIndices(idx)
     for (const target of targets.reverse()) {
-      void deleteDocument(target)
+      await deleteDocument(target)
     }
   }
 
@@ -192,7 +192,7 @@ export function Navigator() {
                     onSelect={(e) => handleSelect(idx, e)}
                     onDelete={(e) => {
                       e.stopPropagation()
-                      handleDelete(idx)
+                      void handleDelete(idx)
                     }}
                     onProcess={(e) => {
                       e.stopPropagation()

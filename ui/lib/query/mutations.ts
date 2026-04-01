@@ -502,11 +502,11 @@ export const useDocumentMutations = () => {
 
       // Invalidate the query so the UI realizes the document content at nextIndex has changed
       // (because the array shifted left after deletion, or the document is now empty)
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.documents.current(nextIndex),
-      })
+      if (newTotalPages > 0 && nextIndex >= 0 && nextIndex < newTotalPages) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.documents.current(nextIndex),
+        })
 
-      if (newTotalPages > 0) {
         await queryClient.prefetchQuery({
           queryKey: queryKeys.documents.current(nextIndex),
           queryFn: () => api.getDocument(nextIndex),
