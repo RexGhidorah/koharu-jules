@@ -366,7 +366,9 @@ export const api = {
       const res = await fetchBinary('/project/save', {
         method: 'POST',
       })
-      const blob = new Blob([res.data.buffer as ArrayBuffer], { type: res.contentType })
+      const blob = new Blob([res.data.buffer as ArrayBuffer], {
+        type: res.contentType,
+      })
       await fileSave(blob, {
         fileName: res.filename ?? 'project.khr',
         extensions: ['.khr'],
@@ -836,13 +838,18 @@ export const api = {
   },
 }
 
-const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp']
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.cbz', '.zip']
 
 const pickDocuments = async (): Promise<File[] | null> => {
   try {
     return await fileOpen({
       description: 'Documents',
-      mimeTypes: ['image/*'],
+      mimeTypes: [
+        'image/*',
+        'application/zip',
+        'application/x-zip-compressed',
+        'application/vnd.comicbook+zip',
+      ],
       extensions: IMAGE_EXTENSIONS,
       multiple: true,
     })
