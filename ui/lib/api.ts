@@ -361,7 +361,7 @@ export const api = {
     })
   },
 
-  async saveProject(): Promise<void> {
+  async saveProject(existingHandle?: any): Promise<any> {
     return withRpcError('save_project', async () => {
       const res = await fetchBinary('/project/save', {
         method: 'POST',
@@ -369,15 +369,16 @@ export const api = {
       const blob = new Blob([res.data.buffer as ArrayBuffer], {
         type: res.contentType,
       })
-      await fileSave(blob, {
+      const newHandle = await fileSave(blob, {
         fileName: res.filename ?? 'project.khr',
         extensions: ['.khr'],
         description: 'Koharu Project File',
-      })
+      }, existingHandle)
+      return newHandle || existingHandle
     })
   },
 
-  async openProject(): Promise<void> {
+  async openProject(): Promise<any> {
     return withRpcError('open_project', async () => {
       const file = await fileOpen({
         extensions: ['.khr'],
@@ -391,6 +392,7 @@ export const api = {
           'Content-Type': 'application/octet-stream',
         },
       })
+      return file.handle
     })
   },
 

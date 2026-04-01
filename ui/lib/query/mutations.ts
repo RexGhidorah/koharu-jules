@@ -322,12 +322,14 @@ export const useDocumentMutations = () => {
 
   const saveProject = useCallback(async () => {
     const { startOperation, finishOperation } = useOperationStore.getState()
+    const { projectFileHandle, setProjectFileHandle } = useEditorUiStore.getState()
     startOperation({
       type: 'load-khr',
       cancellable: false,
     })
     try {
-      await api.saveProject()
+      const handle = await api.saveProject(projectFileHandle)
+      if (handle) setProjectFileHandle(handle)
     } catch (e) {
       if ((e as Error).name !== 'AbortError') throw e
     } finally {
@@ -342,8 +344,9 @@ export const useDocumentMutations = () => {
       cancellable: false,
     })
     try {
-      await api.openProject()
+      const handle = await api.openProject()
       const count = await api.getDocumentsCount()
+      useEditorUiStore.getState().setProjectFileHandle(handle)
       useEditorUiStore.getState().setTotalPages(count)
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, count)
@@ -905,11 +908,16 @@ export const useLlmMutations = () => {
       usePreferencesStore.getState().openAiCompatibleConfigVersion
     const models = await api.llmList(i18n.language)
     const providers = Array.from(
-      new Set(
-        models
+      new Set([
+        ...models
           .map((model) => model.source)
           .filter((source) => source && source !== 'local'),
-      ),
+        'openrouter',
+        'openai',
+        'gemini',
+        'claude',
+        'deepseek',
+      ])
     )
     for (const provider of providers) {
       try {

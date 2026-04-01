@@ -4,6 +4,8 @@ import { create } from 'zustand'
 import { RenderEffect, RenderStroke, ToolMode } from '@/types'
 
 type EditorUiState = {
+  projectFileHandle: any | null
+  setProjectFileHandle: (handle: any | null) => void
   totalPages: number
   documentsVersion: number
   currentDocumentIndex: number
@@ -67,6 +69,8 @@ const initialState = {
 
 export const useEditorUiStore = create<EditorUiState>((set, get) => ({
   ...initialState,
+  projectFileHandle: null,
+  setProjectFileHandle: (handle) => set({ projectFileHandle: handle }),
   setTotalPages: (count) => {
     set((state) => {
       if (state.totalPages === count) return state
