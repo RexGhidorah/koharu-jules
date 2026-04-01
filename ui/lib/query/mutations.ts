@@ -494,11 +494,18 @@ export const useDocumentMutations = () => {
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: nextIndex,
         selectedBlockIndex: undefined,
+        // Also remove it from multiselection
+        selectedDocumentIndices: new Set(
+          Array.from(state.selectedDocumentIndices)
+            .map(i => (i > index ? i - 1 : i))
+            .filter(i => i !== index)
+        )
       }))
 
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, newTotalPages)
       await refreshDocuments()
+      await invalidateCurrentDocument(queryClient, nextIndex)
     },
     [queryClient, refreshDocuments],
   )
@@ -892,11 +899,13 @@ export const useLlmMutations = () => {
       usePreferencesStore.getState().openAiCompatibleConfigVersion
     const models = await api.llmList(i18n.language)
     const providers = Array.from(
-      new Set(
-        models
+      new Set([
+        ...models
           .map((model) => model.source)
           .filter((source) => source && source !== 'local'),
-      ),
+        // Always try to hydrate known providers even if they currently return no models
+        'openai', 'gemini', 'claude', 'deepseek', 'openrouter'
+      ]),
     )
     for (const provider of providers) {
       try {

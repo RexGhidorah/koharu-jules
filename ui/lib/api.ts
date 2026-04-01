@@ -369,10 +369,15 @@ export const api = {
       const blob = new Blob([res.data.buffer as ArrayBuffer], {
         type: res.contentType,
       })
+
+      // To implement a true Save (overwriting the previously opened file),
+      // we would use a FileSystemHandle stored in memory.
+      // For now, this saves a new file or overwrites the explicitly chosen file.
       await fileSave(blob, {
         fileName: res.filename ?? 'project.khr',
         extensions: ['.khr'],
         description: 'Koharu Project File',
+        id: 'koharu-project',
       })
     })
   },
