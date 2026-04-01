@@ -28,11 +28,11 @@ export const useDocumentsCountQuery = (enabled = true) =>
     enabled,
   })
 
-export const useCurrentDocumentQuery = (index: number, enabled = true) =>
+export const useCurrentDocumentQuery = (index: number, enabled = true, totalPages: number = 0) =>
   useQuery({
     queryKey: queryKeys.documents.current(index),
     queryFn: () => api.getDocument(index),
-    enabled,
+    enabled: enabled && index >= 0 && index < totalPages,
     placeholderData: keepPreviousData,
     structuralSharing: false,
   })
@@ -45,6 +45,7 @@ export const useCurrentDocumentState = () => {
   const currentDocumentQuery = useCurrentDocumentQuery(
     currentDocumentIndex,
     totalPages > 0,
+    totalPages,
   )
 
   return {
