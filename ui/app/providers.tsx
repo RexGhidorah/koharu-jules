@@ -56,6 +56,7 @@ function ProvidersBootstrap({ children }: { children: ReactNode }) {
   const geminiApiKeyQuery = useApiKeyQuery('gemini', shouldQueryApiKeys)
   const claudeApiKeyQuery = useApiKeyQuery('claude', shouldQueryApiKeys)
   const deepSeekApiKeyQuery = useApiKeyQuery('deepseek', shouldQueryApiKeys)
+  const openRouterApiKeyQuery = useApiKeyQuery('openrouter', shouldQueryApiKeys)
 
   const applyDocumentsSnapshot = (documents: DocumentSummary[]) => {
     const count = documents.length
@@ -201,6 +202,12 @@ function ProvidersBootstrap({ children }: { children: ReactNode }) {
       setApiKey('deepseek', deepSeekApiKeyQuery.data ?? '')
     }
   }, [deepSeekApiKeyQuery.data, deepSeekApiKeyQuery.status, setApiKey])
+
+  useEffect(() => {
+    if (openRouterApiKeyQuery.status === 'success') {
+      setApiKey('openrouter', openRouterApiKeyQuery.data ?? '')
+    }
+  }, [openRouterApiKeyQuery.data, openRouterApiKeyQuery.status, setApiKey])
 
   useEffect(() => {
     if (isStartupRoute) return
