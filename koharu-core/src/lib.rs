@@ -181,7 +181,54 @@ impl Document {
 
     pub fn from_bytes(path: impl Into<PathBuf>, bytes: Vec<u8>) -> anyhow::Result<Vec<Self>> {
         let path = path.into();
-        Ok(vec![Self::image(path, bytes)?])
+        let ext = path
+            .extension()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+        if ext == "zip" || ext == "cbz" {
+            Self::zip(bytes)
+        } else {
+            Ok(vec![Self::image(path, bytes)?])
+        }
+    }
+
+    fn zip(bytes: Vec<u8>) -> anyhow::Result<Vec<Self>> {
+        use std::io::{Cursor, Read};
+        use zip::ZipArchive;
+
+        let cursor = Cursor::new(bytes);
+        let mut archive = ZipArchive::new(cursor)?;
+        let mut documents = Vec::new();
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            if file.is_dir() {
+                continue;
+            }
+
+            let name = file.name().to_string();
+            let path = PathBuf::from(&name);
+            let ext = path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase();
+
+            if matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp") {
+                let mut buf = Vec::new();
+                if file.read_to_end(&mut buf).is_ok() {
+                    // Try to decode the image. If it fails, log and continue.
+                    if let Ok(doc) = Self::image(path, buf) {
+                        documents.push(doc);
+                    }
+                }
+            }
+        }
+
+        documents.sort_by(|a, b| a.name.cmp(&b.name));
+
+        Ok(documents)
     }
 
     fn image(path: PathBuf, bytes: Vec<u8>) -> anyhow::Result<Self> {

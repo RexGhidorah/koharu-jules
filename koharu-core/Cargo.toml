@@ -23,6 +23,7 @@ strum = { workspace = true }
 tokio = { workspace = true }
 ts-rs = { workspace = true }
 uuid = { workspace = true }
+zip = { workspace = true }
 zstd = "0.13.3"
 
 [dev-dependencies]
