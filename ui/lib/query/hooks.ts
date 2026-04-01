@@ -50,8 +50,8 @@ export const useCurrentDocumentState = () => {
   return {
     currentDocumentIndex,
     totalPages,
-    currentDocument: currentDocumentQuery.data ?? null,
-    currentDocumentLoading: currentDocumentQuery.isPending,
+    currentDocument: totalPages > 0 ? (currentDocumentQuery.data ?? null) : null,
+    currentDocumentLoading: totalPages > 0 ? currentDocumentQuery.isPending : false,
     refreshCurrentDocument: currentDocumentQuery.refetch,
   }
 }
