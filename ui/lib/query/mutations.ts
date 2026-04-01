@@ -494,6 +494,7 @@ export const useDocumentMutations = () => {
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: nextIndex,
         selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
       }))
 
       clearMaskSync()

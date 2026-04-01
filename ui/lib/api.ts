@@ -347,8 +347,11 @@ export const api = {
     return withRpcError('add_documents', async () => {
       const files = await pickDocuments()
       if (!files?.length) return 0
+      const sortedFiles = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true }),
+      )
       const formData = new FormData()
-      files.forEach((file) => formData.append('files', file, file.name))
+      sortedFiles.forEach((file) => formData.append('files', file, file.name))
       const result = await fetchJson<{ totalCount: number }>(
         '/documents/import?mode=append',
         {
@@ -398,8 +401,11 @@ export const api = {
     return withRpcError('open_documents', async () => {
       const files = await pickDocuments()
       if (!files?.length) return 0
+      const sortedFiles = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true }),
+      )
       const formData = new FormData()
-      files.forEach((file) => formData.append('files', file, file.name))
+      sortedFiles.forEach((file) => formData.append('files', file, file.name))
       const result = await fetchJson<{ totalCount: number }>(
         '/documents/import?mode=replace',
         {
@@ -416,8 +422,11 @@ export const api = {
     return withRpcError('open_documents', async () => {
       const files = await pickFolder()
       if (!files?.length) return 0
+      const sortedFiles = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true }),
+      )
       const formData = new FormData()
-      files.forEach((file) => formData.append('files', file, file.name))
+      sortedFiles.forEach((file) => formData.append('files', file, file.name))
       const result = await fetchJson<{ totalCount: number }>(
         '/documents/import?mode=replace',
         {
@@ -434,8 +443,11 @@ export const api = {
     return withRpcError('add_documents', async () => {
       const files = await pickFolder()
       if (!files?.length) return 0
+      const sortedFiles = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true }),
+      )
       const formData = new FormData()
-      files.forEach((file) => formData.append('files', file, file.name))
+      sortedFiles.forEach((file) => formData.append('files', file, file.name))
       const result = await fetchJson<{ totalCount: number }>(
         '/documents/import?mode=append',
         {
