@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
-import { Trash2Icon } from 'lucide-react'
+import { CheckIcon, MoreVerticalIcon, Trash2Icon } from 'lucide-react'
 import { useDocumentsCountQuery, useThumbnailQuery } from '@/lib/query/hooks'
 import { useDocumentMutations } from '@/lib/query/mutations'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
@@ -16,6 +16,11 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { flushTextBlockSync } from '@/lib/services/syncQueues'
 import { cancelObjectUrlRevoke, revokeObjectUrlLater } from '@/lib/util'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 export function Navigator() {
   const { data: totalPagesData = 0 } = useDocumentsCountQuery()
@@ -26,6 +31,18 @@ export function Navigator() {
   )
   const setCurrentDocumentIndex = useEditorUiStore(
     (state) => state.setCurrentDocumentIndex,
+  )
+  const selectedDocumentIndices = useEditorUiStore(
+    (state) => state.selectedDocumentIndices,
+  )
+  const setSelectedDocumentIndices = useEditorUiStore(
+    (state) => state.setSelectedDocumentIndices,
+  )
+  const toggleDocumentSelection = useEditorUiStore(
+    (state) => state.toggleDocumentSelection,
+  )
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
+    null,
   )
   const listRef = useRef<HTMLDivElement | null>(null)
   const indices = useMemo(
@@ -46,7 +63,74 @@ export function Navigator() {
     rowVirtualizer.measure()
   }, [rowVirtualizer, totalPages, documentsVersion])
 
-  const { deleteDocument } = useDocumentMutations()
+  const {
+    deleteDocument,
+    exportDocument,
+    exportPsdDocument,
+    processImage,
+  } = useDocumentMutations()
+
+  const handleSelect = (idx: number, event?: React.MouseEvent) => {
+    if (event?.shiftKey && lastSelectedIndex !== null) {
+      const min = Math.min(idx, lastSelectedIndex)
+      const max = Math.max(idx, lastSelectedIndex)
+      const nextSelection = new Set(selectedDocumentIndices)
+      for (let i = min; i <= max; i++) {
+        nextSelection.add(i)
+      }
+      setSelectedDocumentIndices(nextSelection)
+    } else if (event?.metaKey || event?.ctrlKey) {
+      toggleDocumentSelection(idx)
+      setLastSelectedIndex(idx)
+    } else {
+      setSelectedDocumentIndices(new Set([idx]))
+      setLastSelectedIndex(idx)
+      void flushTextBlockSync()
+        .catch(() => {})
+        .finally(() => {
+          setCurrentDocumentIndex(idx)
+        })
+    }
+  }
+
+  const getTargetIndices = (idx: number) => {
+    if (selectedDocumentIndices.has(idx)) {
+      return Array.from(selectedDocumentIndices)
+    }
+    return [idx]
+  }
+
+  const handleDelete = (idx: number) => {
+    const targets = getTargetIndices(idx)
+    for (const target of targets.reverse()) {
+      void deleteDocument(target)
+    }
+  }
+
+  const handleProcess = async (idx: number) => {
+    // If we're clicking the context menu of an item that is selected,
+    // processImage uses selectedDocumentIndices from store.
+    // If it's not selected, we pass the idx to process only that item.
+    if (selectedDocumentIndices.has(idx)) {
+      await processImage()
+    } else {
+      await processImage(undefined, idx)
+    }
+  }
+
+  const handleExport = async (idx: number) => {
+    const targets = getTargetIndices(idx)
+    for (const target of targets) {
+      await exportDocument(target)
+    }
+  }
+
+  const handleExportPsd = async (idx: number) => {
+    const targets = getTargetIndices(idx)
+    for (const target of targets) {
+      await exportPsdDocument(target)
+    }
+  }
 
   return (
     <div
@@ -104,16 +188,28 @@ export function Navigator() {
                     index={idx}
                     documentsVersion={documentsVersion}
                     selected={idx === currentDocumentIndex}
-                    onSelect={() => {
-                      void flushTextBlockSync()
-                        .catch(() => {})
-                        .finally(() => {
-                          setCurrentDocumentIndex(idx)
-                        })
-                    }}
+                    multiSelected={selectedDocumentIndices.has(idx)}
+                    onSelect={(e) => handleSelect(idx, e)}
                     onDelete={(e) => {
                       e.stopPropagation()
-                      void deleteDocument(idx)
+                      handleDelete(idx)
+                    }}
+                    onProcess={(e) => {
+                      e.stopPropagation()
+                      handleProcess(idx)
+                    }}
+                    onExport={(e) => {
+                      e.stopPropagation()
+                      handleExport(idx)
+                    }}
+                    onExportPsd={(e) => {
+                      e.stopPropagation()
+                      handleExportPsd(idx)
+                    }}
+                    onToggleMultiSelect={(e) => {
+                      e.stopPropagation()
+                      toggleDocumentSelection(idx)
+                      setLastSelectedIndex(idx)
                     }}
                   />
                 </div>
@@ -130,17 +226,28 @@ type PagePreviewProps = {
   index: number
   documentsVersion: number
   selected: boolean
-  onSelect: () => void
+  multiSelected: boolean
+  onSelect: (e: React.MouseEvent) => void
   onDelete: (e: React.MouseEvent) => void
+  onProcess: (e: React.MouseEvent) => void
+  onExport: (e: React.MouseEvent) => void
+  onExportPsd: (e: React.MouseEvent) => void
+  onToggleMultiSelect: (e: React.MouseEvent) => void
 }
 
 function PagePreview({
   index,
   documentsVersion,
   selected,
+  multiSelected,
   onSelect,
   onDelete,
+  onProcess,
+  onExport,
+  onExportPsd,
+  onToggleMultiSelect,
 }: PagePreviewProps) {
+  const { t } = useTranslation()
   const [preview, setPreview] = useState<string>()
   const {
     data: thumbnailBlob,
@@ -163,13 +270,24 @@ function PagePreview({
 
   return (
     <div className='group relative'>
+      <div className='absolute left-1 top-1 z-10 hidden group-hover:block data-[selected=true]:block' data-selected={multiSelected}>
+        <Button
+          variant='ghost'
+          size='icon-xs'
+          onClick={onToggleMultiSelect}
+          className={`size-5 rounded border bg-background/80 shadow-sm ${multiSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-transparent hover:text-foreground'}`}
+        >
+          <CheckIcon className='size-3.5' />
+        </Button>
+      </div>
       <Button
         variant='ghost'
         onClick={onSelect}
         data-testid={`navigator-page-${index}`}
         data-page-index={index}
         data-selected={selected}
-        className='bg-card data-[selected=true]:border-primary flex h-auto w-full flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm'
+        data-multi-selected={multiSelected}
+        className='bg-card data-[selected=true]:border-primary data-[multi-selected=true]:border-primary/50 flex h-auto w-full flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm transition-colors'
       >
         {loading ? (
           <div className='bg-muted aspect-3/4 w-full animate-pulse rounded' />
@@ -194,21 +312,35 @@ function PagePreview({
         </div>
       </Button>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant='destructive'
-            size='icon-xs'
-            onClick={onDelete}
-            className='absolute -top-1 -right-1 hidden size-5 rounded-full shadow-md group-hover:flex'
-          >
-            <Trash2Icon className='size-3' />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side='left' sideOffset={4}>
-          Delete
-        </TooltipContent>
-      </Tooltip>
+      <div className='absolute right-1 top-1 z-10 hidden group-hover:block'>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant='ghost'
+              size='icon-xs'
+              className='size-5 rounded bg-background/80 shadow-sm border border-border'
+            >
+              <MoreVerticalIcon className='size-3.5' />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align='end' className='w-40 p-1'>
+            <div className='flex flex-col gap-1'>
+              <Button variant='ghost' size='sm' className='justify-start text-xs' onClick={onProcess}>
+                {t('menu.process')}
+              </Button>
+              <Button variant='ghost' size='sm' className='justify-start text-xs' onClick={onExport}>
+                {t('menu.export')}
+              </Button>
+              <Button variant='ghost' size='sm' className='justify-start text-xs' onClick={onExportPsd}>
+                {t('menu.exportPsd')}
+              </Button>
+              <Button variant='ghost' size='sm' className='justify-start text-xs text-destructive hover:bg-destructive/10 hover:text-destructive' onClick={onDelete}>
+                {t('menu.delete')}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   )
 }

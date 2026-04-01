@@ -702,20 +702,24 @@ async fn start_pipeline_job(
     Json(request): Json<PipelineJobRequest>,
 ) -> ApiResult<Json<JobState>> {
     let resources = state.resources()?;
-    let index = if let Some(document_id) = request.document_id.as_deref() {
-        Some(state_tx::find_doc_index(&resources.state, document_id).await?)
+    let indices = if let Some(document_ids) = request.document_ids.as_deref() {
+        let mut resolved = Vec::new();
+        for id in document_ids {
+            resolved.push(state_tx::find_doc_index(&resources.state, id).await?);
+        }
+        Some(resolved)
     } else {
         None
     };
-    let total_documents = match index {
-        Some(_) => 1,
+    let total_documents = match &indices {
+        Some(vec) => vec.len(),
         None => state_tx::doc_count(&resources.state).await,
     };
 
     let job_id = operations::process(
         resources.clone(),
         koharu_core::ProcessRequest {
-            index,
+            indices,
             llm_model_id: request.llm_model_id,
             llm_api_key: request.llm_api_key,
             llm_base_url: request.llm_base_url,

@@ -135,7 +135,7 @@ pub struct LlmGenerateParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessRequest {
-    pub index: Option<usize>,
+    pub indices: Option<Vec<usize>>,
     pub llm_model_id: Option<String>,
     pub llm_api_key: Option<String>,
     pub llm_base_url: Option<String>,
@@ -402,7 +402,7 @@ mod tests {
             language: Some("zh-CN".to_string()),
         });
         round_trip(&ProcessRequest {
-            index: Some(1),
+            indices: Some(vec![1]),
             llm_model_id: Some("sakura".to_string()),
             llm_api_key: None,
             llm_base_url: Some("http://127.0.0.1:1234/v1".to_string()),
