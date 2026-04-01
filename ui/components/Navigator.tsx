@@ -249,6 +249,7 @@ function PagePreview({
 }: PagePreviewProps) {
   const { t } = useTranslation()
   const [preview, setPreview] = useState<string>()
+  const [menuOpen, setMenuOpen] = useState(false)
   const {
     data: thumbnailBlob,
     isPending: loading,
@@ -312,8 +313,8 @@ function PagePreview({
         </div>
       </Button>
 
-      <div className='absolute right-1 top-1 z-10 hidden group-hover:block'>
-        <Popover>
+      <div className={`absolute right-1 top-1 z-10 ${menuOpen ? 'block' : 'hidden group-hover:block'}`}>
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
             <Button
               variant='ghost'
