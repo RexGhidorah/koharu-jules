@@ -70,6 +70,6 @@ pub fn load_documents(inputs: Vec<(PathBuf, Vec<u8>)>) -> anyhow::Result<Vec<Doc
         .flatten()
         .collect();
 
-    documents.sort_by_key(|doc| doc.name.clone());
+    documents.sort_by_key(|doc| doc.path.clone());
     Ok(documents)
 }

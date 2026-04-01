@@ -226,7 +226,7 @@ impl Document {
             }
         }
 
-        documents.sort_by(|a, b| a.name.cmp(&b.name));
+        documents.sort_by(|a, b| a.path.cmp(&b.path));
 
         Ok(documents)
     }
