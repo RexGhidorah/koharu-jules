@@ -101,8 +101,8 @@ export function Navigator() {
   }
 
   const handleDelete = async (idx: number) => {
-    const targets = getTargetIndices(idx)
-    for (const target of targets.reverse()) {
+    const targets = getTargetIndices(idx).sort((a, b) => b - a)
+    for (const target of targets) {
       await deleteDocument(target)
     }
   }
