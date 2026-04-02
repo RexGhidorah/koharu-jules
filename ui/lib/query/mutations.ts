@@ -344,7 +344,13 @@ export const useDocumentMutations = () => {
     try {
       await api.openProject()
       const count = await api.getDocumentsCount()
-      useEditorUiStore.getState().setTotalPages(count)
+      useEditorUiStore.setState((state) => ({
+        totalPages: count,
+        documentsVersion: state.documentsVersion + 1,
+        currentDocumentIndex: 0,
+        selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
+      }))
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, count)
       await refreshDocuments()
@@ -369,7 +375,13 @@ export const useDocumentMutations = () => {
     })
     try {
       const count = await api.openDocuments()
-      useEditorUiStore.getState().setTotalPages(count)
+      useEditorUiStore.setState((state) => ({
+        totalPages: count,
+        documentsVersion: state.documentsVersion + 1,
+        currentDocumentIndex: 0,
+        selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
+      }))
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, count)
       await refreshDocuments()
@@ -406,6 +418,7 @@ export const useDocumentMutations = () => {
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: previousCount > 0 ? previousCount : 0,
         selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
       }))
 
       if (count > previousCount) {
@@ -427,7 +440,13 @@ export const useDocumentMutations = () => {
     })
     try {
       const count = await api.openFolder()
-      useEditorUiStore.getState().setTotalPages(count)
+      useEditorUiStore.setState((state) => ({
+        totalPages: count,
+        documentsVersion: state.documentsVersion + 1,
+        currentDocumentIndex: 0,
+        selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
+      }))
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, count)
       await refreshDocuments()
@@ -464,6 +483,7 @@ export const useDocumentMutations = () => {
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: previousCount > 0 ? previousCount : 0,
         selectedBlockIndex: undefined,
+        selectedDocumentIndices: new Set(),
       }))
 
       if (count > previousCount) {
