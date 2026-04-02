@@ -102,9 +102,14 @@ export function Navigator() {
 
   const handleDelete = async (idx: number) => {
     const targets = getTargetIndices(idx).sort((a, b) => b - a)
+
+    // Process sequentially to ensure state updates properly between deletes
     for (const target of targets) {
       await deleteDocument(target)
     }
+
+    // Clear any lingering selection explicitly
+    setSelectedDocumentIndices(new Set())
   }
 
   const handleProcess = async (idx: number) => {
