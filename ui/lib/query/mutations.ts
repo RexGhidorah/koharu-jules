@@ -514,24 +514,21 @@ export const useDocumentMutations = () => {
         documentsVersion: state.documentsVersion + 1,
         currentDocumentIndex: nextIndex,
         selectedBlockIndex: undefined,
-        selectedDocumentIndices: new Set(),
+        // Also remove it from multiselection
+        selectedDocumentIndices: new Set(
+          Array.from(state.selectedDocumentIndices)
+            .map(i => (i > index ? i - 1 : i))
+            .filter(i => i !== index)
+        )
       }))
 
       clearMaskSync()
       queryClient.setQueryData(queryKeys.documents.count, newTotalPages)
       await refreshDocuments()
-
-      // Invalidate the query so the UI realizes the document content at nextIndex has changed
-      // (because the array shifted left after deletion, or the document is now empty)
-      if (newTotalPages > 0 && nextIndex >= 0 && nextIndex < newTotalPages) {
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.documents.current(nextIndex),
-        })
-
-        await queryClient.prefetchQuery({
-          queryKey: queryKeys.documents.current(nextIndex),
-          queryFn: () => api.getDocument(nextIndex),
-        })
+      if (newTotalPages > 0) {
+        await invalidateCurrentDocument(queryClient, nextIndex)
+      } else {
+        queryClient.setQueryData(queryKeys.documents.current(0), undefined)
       }
     },
     [queryClient, refreshDocuments],
@@ -926,11 +923,13 @@ export const useLlmMutations = () => {
       usePreferencesStore.getState().openAiCompatibleConfigVersion
     const models = await api.llmList(i18n.language)
     const providers = Array.from(
-      new Set(
-        models
+      new Set([
+        ...models
           .map((model) => model.source)
           .filter((source) => source && source !== 'local'),
-      ),
+        // Always try to hydrate known providers even if they currently return no models
+        'openai', 'gemini', 'claude', 'deepseek', 'openrouter'
+      ]),
     )
     for (const provider of providers) {
       try {
