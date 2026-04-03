@@ -501,32 +501,34 @@ export const useDocumentMutations = () => {
     async (index: number) => {
       await api.deleteDocument(index)
 
-      const { totalPages, currentDocumentIndex } = useEditorUiStore.getState()
-      const newTotalPages = Math.max(0, totalPages - 1)
-
-      let nextIndex = currentDocumentIndex
-      if (currentDocumentIndex >= newTotalPages) {
-        nextIndex = Math.max(0, newTotalPages - 1)
-      }
-
-      useEditorUiStore.setState((state) => ({
-        totalPages: newTotalPages,
-        documentsVersion: state.documentsVersion + 1,
-        currentDocumentIndex: nextIndex,
-        selectedBlockIndex: undefined,
-        // Also remove it from multiselection
-        selectedDocumentIndices: new Set(
-          Array.from(state.selectedDocumentIndices)
-            .map(i => (i > index ? i - 1 : i))
-            .filter(i => i !== index)
-        )
-      }))
+      const count = await api.getDocumentsCount()
+      useEditorUiStore.setState((state) => {
+        let nextIndex = state.currentDocumentIndex
+        if (nextIndex >= count) {
+          nextIndex = Math.max(0, count - 1)
+        }
+        return {
+          totalPages: count,
+          documentsVersion: state.documentsVersion + 1,
+          currentDocumentIndex: nextIndex,
+          selectedBlockIndex: undefined,
+          selectedDocumentIndices: new Set(),
+        }
+      })
 
       clearMaskSync()
-      queryClient.setQueryData(queryKeys.documents.count, newTotalPages)
+      queryClient.setQueryData(queryKeys.documents.count, count)
       await refreshDocuments()
-      if (newTotalPages > 0) {
-        await invalidateCurrentDocument(queryClient, nextIndex)
+
+      if (count > 0) {
+        const { currentDocumentIndex } = useEditorUiStore.getState()
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.documents.current(currentDocumentIndex),
+        })
+        await queryClient.prefetchQuery({
+          queryKey: queryKeys.documents.current(currentDocumentIndex),
+          queryFn: () => api.getDocument(currentDocumentIndex),
+        })
       } else {
         queryClient.setQueryData(queryKeys.documents.current(0), undefined)
       }
