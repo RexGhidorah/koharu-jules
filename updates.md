@@ -1,61 +1,49 @@
-# Koharu Custom Features & Updates Guide
+# LLM Reimplementation Guide: Koharu Custom Features
 
-Este documento detalla las características personalizadas y modificaciones aplicadas sobre la base de Koharu.
-Está pensado como una guía técnica para re-aplicar esta lógica en caso de partir de un nuevo fork (ej. versión 0.42.2+).
+Este documento es una **especificación de requisitos para IA (como Jules)** pensada para reconstruir las características personalizadas en un *fork* limpio de Koharu (versión 0.42.2 o superior).
+
+⚠️ **NOTA IMPORTANTE PARA EL LLM:**
+La arquitectura base de Koharu (estado del frontend, manejo de API, almacenamiento en el backend con Rust) ha cambiado drásticamente en la versión 0.42.x (ej. transición a XState/Orval y reescritura del storage).
+**No busques los archivos antiguos.** Debes comprender la *lógica* descrita aquí e integrarla de forma nativa en la nueva arquitectura y estructura de carpetas que encuentres en el repositorio.
+
+---
 
 ## 1. Selección Múltiple (Batch) y Procesamiento Masivo
-**Objetivo:** Permitir al usuario seleccionar múltiples documentos a la vez y procesarlos en lote.
-**Ubicación principal:** Frontend UI (`ui/components/Navigator.tsx` o similar, junto con las tiendas de estado global).
-**Lógica:**
-- Se agregó estado en el frontend (ej. un Set o arreglo de IDs en zustand) para llevar el registro de qué documentos están "seleccionados".
-- Se modificó la interfaz para permitir Shift-Click o Ctrl-Click.
-- Al ejecutar acciones (como procesar, traducir, etc.), la UI envía un arreglo de IDs al backend en vez de solo el documento activo.
+- **Requisito:** Permitir al usuario seleccionar múltiples documentos/imágenes a la vez en la barra de navegación lateral.
+- **Frontend:** Implementar lógica de selección con `Shift-Click` (rango) y `Ctrl-Click`/`Cmd-Click` (individual). Mantener un estado global (`Set` o arreglo de IDs) de los "documentos seleccionados".
+- **Interacción:** Cuando el usuario ejecute una acción masiva (procesar, OCR, traducir), el frontend debe iterar o enviar un arreglo con todos los IDs seleccionados al backend, en lugar de procesar únicamente la imagen activa.
 
 ## 2. Exportación Masiva (Batch Export)
-**Objetivo:** Poder exportar múltiples imágenes o el proyecto entero de una sola vez.
-**Ubicación principal:** Frontend UI (componentes de exportación y llamadas a la API) y Backend Rust (ej. `koharu-rpc/src/api.rs`, `koharu-app/src/ops/project.rs`).
-**Lógica:**
-- Modificación en el backend para recibir múltiples IDs.
-- Se asegura de que se construya el `.zip` o se exporten todas las imágenes especificadas de los documentos seleccionados en lote.
+- **Requisito:** Descargar todas las imágenes seleccionadas o el proyecto entero de una sola vez.
+- **Backend:** Asegurar (o crear) un endpoint en Rust capaz de recibir múltiples IDs de documentos. El backend debe generar y devolver un archivo `.zip` que contenga las imágenes procesadas.
+- **Frontend:** Añadir un botón o modificar el flujo de exportación para invocar este endpoint con el arreglo de documentos seleccionados.
 
-## 3. Buscador de Fuentes (Font Search)
-**Objetivo:** Filtrar y buscar rápidamente la fuente deseada en el panel de renderizado.
-**Ubicación principal:** `ui/components/panels/RenderControlsPanel.tsx` / `ui/components/ui/command.tsx`.
-**Lógica:**
-- Se introdujo un input de búsqueda / componente "Command" encima de la lista de fuentes.
-- La lista renderizada aplica un `filter` basado en el texto introducido (ignorando mayúsculas y minúsculas).
+## 3. Buscador de Fuentes Personalizado (Font Search)
+- **Requisito:** Facilitar la búsqueda de tipografías cuando el usuario tiene muchas instaladas.
+- **Frontend:** En el panel de control de renderizado (RenderControls), justo encima de la lista de fuentes disponibles, integrar un input de búsqueda de texto.
+- **Lógica:** Filtrar en tiempo real la lista de fuentes que se renderiza basándose en el texto introducido (ignorando mayúsculas/minúsculas).
 
-## 4. Opción de Guardar Proyecto (Save/Export Project)
-**Objetivo:** Persistir la sesión y documentos del proyecto en un archivo `.khr`.
-**Ubicación principal:** `koharu-core/src/project.rs`, `koharu-app/src/ops/project.rs`, `koharu-rpc/src/api.rs`.
-**Lógica:**
-- Serialización de la estructura de estado/documentos.
-- Lógica en el backend en Rust para empaquetar datos / imágenes asociadas al proyecto en un formato portable.
-- Adición de un botón "Guardar Proyecto" en la UI que desencadena esta llamada al backend.
+## 4. Guardar Proyecto (Project Save/Export)
+- **Requisito:** Persistir toda la sesión de trabajo (imágenes, bloques de texto detectados, traducciones) en un archivo portable (ej. `.khr`).
+- **Backend:** Crear la lógica de serialización para empaquetar el estado actual del espacio de trabajo (workspace) y sus imágenes en un archivo exportable.
+- **Frontend:** Agregar un botón "Guardar Proyecto" que haga la llamada al backend y permita al usuario descargar o persistir dicho archivo.
 
-## 5. Proveedor de OpenRouter
-**Objetivo:** Usar OpenRouter como alternativa en el servicio LLM.
-**Ubicación principal:** `koharu-llm/src/providers/mod.rs` y `ui/lib/api.ts` (o donde se listen los proveedores).
-**Lógica:**
-- Se añadió OpenRouter al catálogo de proveedores compatibles en el backend (probablemente adaptado sobre OpenAI).
-- Se agregó en la interfaz de configuración la opción para seleccionar "OpenRouter" e introducir su API Key y modelo (ej. `google/gemini-pro`, etc).
+## 5. Integración de OpenRouter
+- **Requisito:** Soportar OpenRouter como proveedor de servicios LLM.
+- **Frontend:** En el diálogo de configuración (Settings), agregar "OpenRouter" a la lista de proveedores. Requerirá campos para el modelo y la API Key, similares a los de OpenAI.
+- **Backend:** Asegurar que el backend rutee correctamente las peticiones de traducción hacia la API de OpenRouter cuando este proveedor esté seleccionado.
 
-## 6. Importación de CBZ / ZIP
-**Objetivo:** Poder importar archivos comprimidos con mangas.
-**Ubicación principal:** Backend (`koharu-core` / `koharu-app`).
-**Lógica:**
-- Descompresión del ZIP/CBZ en memoria o en un directorio temporal.
-- Extracción de todas las imágenes válidas y posterior importación masiva como nuevos documentos dentro del motor de la app.
+## 6. Importación de archivos CBZ / ZIP
+- **Requisito:** Soporte para arrastrar y soltar (drag & drop) o importar archivos comprimidos `.zip` o `.cbz` con cómics/mangas.
+- **Backend:** Lógica para desempaquetar (unzip) el archivo temporalmente, filtrar las imágenes válidas e importarlas como nuevos documentos en el motor de la aplicación de manera masiva.
 
-## 7. Persistencia de Preferencias
-**Objetivo:** Recordar la configuración elegida por el usuario (idioma, tema, proveedores de LLM, configuraciones de renderizado, etc.) entre sesiones.
-**Ubicación principal:** `ui/lib/stores/preferencesStore.ts` (Zustand persist).
-**Lógica:**
-- El estado de Zustand usa el middleware `persist` para guardarse en localStorage / IndexedDB para que al recargar la app se mantengan estas preferencias sin depender del backend.
+## 7. Persistencia de Preferencias (Persistent Preferences)
+- **Requisito:** Recordar configuraciones del usuario (idioma, tema, credenciales de LLM, ajustes de renderizado) para que no se pierdan al refrescar la página o cerrar la app.
+- **Frontend:** Usar el mecanismo de persistencia del gestor de estado (ej. localStorage/IndexedDB a través de middleware si usa Zustand, o el equivalente actual) para auto-cargar la configuración inicial.
 
-## 8. Correcciones al Flujo de Importación y Eliminación de Documentos
-**Objetivo original:** Arreglar errores donde la UI no actualizaba bien el estado de documentos importados o dejaba "fantasmas" (vista previa residual) al eliminarlos.
-**⚠️ NOTA IMPORTANTE PARA NUEVOS FORKS:**
-La versión >=0.42.0 incluye refactorizaciones **masivas** en el almacenamiento del backend, el sistema de estado (usando Rx/XState/Orval), y la gestión de la API del frontend.
-**Es altamente probable** que los errores originales que arreglamos hayan quedado obsoletos (o hayan cambiado drásticamente de contexto).
-**Acción recomendada:** NO importar esta lógica de borrado "a ciegas". Probar primero si el flujo normal de importación/borrado funciona en el nuevo fork; si surge un problema similar, volver a plantear una solución adaptada a la nueva arquitectura.
+## 8. Flujo Completo de Eliminación de Imágenes (Ghost Images / Preview Bug)
+- **Requisito:** Al eliminar un documento/imagen, este debe desaparecer por completo sin dejar rastros visuales ni "fantasmas" de vista previa.
+- **Backend:** La lógica de eliminación debe asegurarse de borrar no solo la entidad en la base de datos/estado, sino también eliminar cualquier *thumbnail* (miniatura) o imagen generada en caché de almacenamiento.
+- **Frontend:**
+  1. Si el usuario elimina el documento que actualmente está "activo" o viéndose en el lienzo principal, el frontend debe limpiar inmediatamente el estado activo (poniéndolo en `null` o cambiando al siguiente documento disponible).
+  2. Forzar la invalidación del caché de queries (ej. React Query) para que la vista previa no quede atrapada en memoria.
